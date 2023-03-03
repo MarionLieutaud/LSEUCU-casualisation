@@ -3,8 +3,7 @@
 
 cff-version: 1.2.0
 title: LSEUCU-casualisation-analysis
-message: Code
-type: software
+type: code repository
 authors:
   - given-names: Marion
     family-names: Lieutaud
