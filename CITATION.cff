@@ -1,1 +1,8 @@
-Marion Lieutaud & LSE UCU, LSEUCU casualisation (2023), Github Repository, https://github.com/MarionLieutaud/LSEUCU-casualisation
+cff-version: 1.2.0
+message: "If you use this repository, please cite it as below."
+authors:
+  - family-names: Lieutaud
+    given-names: Marion
+    orcid: https://orcid.org/0000-0002-9453-4016
+title: "LSE UCU casualisation - HESA analysis"
+date-released: 03-03-2023
