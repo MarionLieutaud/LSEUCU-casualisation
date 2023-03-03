@@ -1,8 +1,23 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
 cff-version: 1.2.0
-message: "If you use this repository, please cite it as below."
+title: LSEUCU-casualisation-analysis
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
 authors:
-  - family-names: Lieutaud
-    given-names: Marion
-    orcid: https://orcid.org/0000-0002-9453-4016
-title: "LSE UCU casualisation - HESA analysis"
-date-released: 03-03-2023
+  - given-names: Marion
+    family-names: Lieutaud
+    email: m.lieutaud@lse.ac.uk
+    affiliation: LSE
+    orcid: 'https://orcid.org/0000-0002-9453-4016'
+identifiers:
+  - type: url
+    value: 'https://github.com/MarionLieutaud'
+    description: Github
+repository-code: 'https://github.com/MarionLieutaud/LSEUCU-casualisation'
+abstract: Analysis of HESA data for LSE UCU report on casualisation
+license: CC0-1.0
+date-released: '2023-03-03'
