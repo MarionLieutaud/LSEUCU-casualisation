@@ -132,8 +132,7 @@ animate(p5_2, duration = 5, height = 450, width = 500, renderer = gifski_rendere
 anim_save("staff_breakdown2.gif", 
           animation = p5_2, 
           renderer = gifski_renderer(),
-          duration = 5, 
-          end_pause = 20, 
+          duration = 7, 
           height = 800, 
           width = 900, 
           res = 150)
