@@ -29,7 +29,7 @@ personal_theme_gif <-
   theme_ipsum(base_size=12) +
   theme(plot.background = element_rect(fill = "white"),
         plot.margin = unit(c(0.5,3.5,0.5,0.5), 'cm'),
-        #panel.spacing.x = unit(0.5, "lines"),
+        panel.border = element_blank(),
         panel.grid.minor.y = element_blank(),
         axis.text.x = element_text(face = "bold",
                                    angle=30, 
@@ -44,7 +44,7 @@ personal_theme_gif <-
 ```
 
 # gganimate: Number of permanent and fixed-term staff
-```{r animate}
+```{r animate1}
 # Run the other script first (LSEUCU_reportcasualisation) or
 # load the merged and cleaned data directly (h) if you saved it before
 
@@ -94,3 +94,48 @@ anim_save("staff_breakdown.gif",
           width = 500, 
           res = 95)
 ```
+
+
+```{r animate2}
+# trying to get rid of buggy end of animation
+p4_2 <- h_lse_long %>%
+  mutate(date_numeric = as.numeric(date_numeric),
+         contract.type = case_match(contract.type,
+                                    "fixed-term" ~ "Fixed-term\npositions",
+                                    "permanent" ~ "Permanent\npositions")) %>%
+  ggplot(aes(x=date_numeric, y=value, group=contract.type)) +
+  geom_point(aes(colour=contract.type), size = 3) +
+  geom_line(aes(colour=contract.type)) +
+  geom_segment(aes(xend=max(date_numeric)+.1, yend = value), linetype = 2, colour = 'grey') +
+  geom_text(aes(x = max(date_numeric)+.1, label = paste0(contract.type,":", sprintf("%5.0f", value)), color = contract.type), hjust=0, size=5, fontface = "bold") +
+  scale_color_manual(values = c("darkred", "black")) +
+  coord_cartesian(clip = 'off') + 
+  #labs(title = 'Active in Jan', y = 'Individual Active') +
+  #enter_drift(x_mod = -1) + exit_drift(x_mod = 1) +
+  scale_y_continuous(limits = c(690, 1100)) +
+  scale_x_continuous(expand = expansion(mult = c(.05, .05)), 
+                     breaks = seq(2014, 2021,by=1), 
+                     labels = levels(as.factor(h_lse_long$date))) +
+  scale_color_manual(values = c("darkred", "black")) +
+  labs(title = "<span style = 'font-size:24pt; color: red'>Casualisation</span> at <span style = 'font-size:24pt; color: red'>LSE</span>",
+       caption = "Source: HESA (annual data 2014-2022)") +
+  personal_theme_gif
+
+# animate and dynamic labels
+p5_2 <- p4_2 + 
+  transition_reveal(date_numeric) + 
+  view_follow(fixed_y = TRUE) +
+  labs(subtitle = "Academic staff. Year: {round(frame_along, 0)}-{round(frame_along+1, 0)}")
+
+animate(p5_2, duration = 5, height = 450, width = 500, renderer = gifski_renderer())
+
+anim_save("staff_breakdown2.gif", 
+          animation = p5_2, 
+          renderer = gifski_renderer(),
+          duration = 5, 
+          end_pause = 20, 
+          height = 800, 
+          width = 900, 
+          res = 150)
+```
+
