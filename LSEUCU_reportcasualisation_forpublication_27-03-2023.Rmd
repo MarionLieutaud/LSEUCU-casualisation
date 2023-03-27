@@ -34,7 +34,7 @@ library(hrbrthemes)
 # theme for simple line plot
 personal_theme_simple <- 
   theme_ipsum(base_size=9) +
-  theme(plot.background = element_rect(fill = "white", color = "white"),
+  theme(plot.background = element_rect(fill = "white"),
         #panel.spacing.x = unit(0.5, "lines"),
         panel.grid.minor.y = element_blank(),
         axis.text.x = element_text(face = "bold",
@@ -354,7 +354,7 @@ p2 <- h_subset_uni %>%
   
 p2
 
-#ggsave(p2, filename = "plot_HESA_prop_casual.png", width = 10, height = 7.5) # save plot
+#ggsave(p2, filename = "plot_HESA_prop_casual.png", width = 6, height = 5) # save plot
 ```
 
 
@@ -644,18 +644,6 @@ p8
 The 2022-2023 Postdoc and Fellow survey, conducted jointly by the LSE Fellows network and the UCU anti-casualisation officers, targeted all categories of post-doctoral fellows (LSE Fellows, Teaching Fellows, Research Fellows, Research Officers). The survey yielded 171 responses, 158 of which are fixed-term but not hourly positions. This includes 99 LSE Fellows, and 49 Research Fellows and Research Officers. Based on HR breakdown of Fellows (including LSE Fellows, Teaching Fellows, Research Fellows, Policy Fellows, Professorial Fellows and Research Officer), we can estimate that the survey participation rate was at around 70% for LSE Fellows and 65% for fixed-term (not hourly) staff overall. The survey represented all departments and institutes except for the departments of Finance and Accounting.
 
 In order to protect the respect the pledge of anonymity that was made to participants in the Postdoc and Fellow Survey, we are not sharing data or code for analysis here, and only include some of the most telling figures. 
-
-```{r, include = FALSE}
-# These are analyses from the fellow survey which cannot be included yet. 
-# But since we will want to include them in a later, full report, I have included them here in this fashion, so as to make it available to us but invisible to readers of the report.
-
-#Most respondents (65%) are funded internally by LSE, as LSE Fellows or Teaching Fellows. **45% of participants have been hired on one-year contracts or shorter** (the percentage of short contracts is the same for externally or internally funded postdoctoral positions). 
-
-#Heavy teaching and marking loads for teaching Fellows as well as LSE Fellows. 40% of full-time LSE Fellows teach more than 101 hours, and 16% teach more than 125 hours per academic year (not including office hours). Half of LSE Fellows (48%) report that they spent upward of 70% of their working time on teaching and administrative duties. Accordingly, two out of three LSE Fellows estimate that their current teaching and administrative load has left them too little time to carry out their research. 
-
-# Fellows' working conditions and precarity
-```
-
 
 ```{r, fig.align='center', out.width="70%", include = TRUE}
 knitr::include_graphics('~/Dropbox (Personal)/LSE UCU/Casualisation data/Q_future_plot.png')
