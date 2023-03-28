@@ -85,6 +85,25 @@ personal_theme_flipped_barplot <-
         legend.text = element_text(size=8),
         legend.title = element_blank())
 
+# theme for facetted plots
+personal_theme_simple_facets <- 
+  theme_ipsum(base_size=9) +
+  theme(plot.background = element_rect(fill = "white"),
+        strip.text = element_text(face = "bold"),
+        panel.grid.minor.y = element_blank(),
+        axis.text.x = element_text(face = "bold",
+                                   angle=30, 
+                                   vjust=1, hjust= 1),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        plot.title = ggtext::element_textbox_simple(size = 12),
+        plot.subtitle = ggtext::element_textbox_simple(size = 9, face = "bold"),
+        plot.caption.position = "plot",
+        plot.caption = element_text(size = 7, face = "italic"),
+        legend.position = "right",
+        legend.text = element_text(size=10),
+        legend.title = element_text(size=11))
+
 
 # set extra colour as needed
 BLUE <- "#076fa2"
@@ -636,6 +655,177 @@ p8
 #ggsave(p9, filename = "plot_HESA_nonUKstudent_barplot.png", width = 6, height = 5) # save plot
 
 ```
+
+\newpage
+# LSE HR internal data
+```{r}
+library(openxlsx)
+a <- loadWorkbook('~/Dropbox (Personal)/LSE UCU/Casualisation data/230323_UCU_TERMS_Data.xlsx')
+sheetNames <- sheets(a)
+for(i in 1:length(sheetNames))
+{
+  assign(sheetNames[i],readWorkbook(a,sheet = i))
+}
+
+hr <- Data # rename "Data" sheetname to "hr"
+rm(Data) 
+
+hr <- hr %>%
+  rename("academic_year" = "Recid.Text",
+         "level" = "Level.2.Long.Desc",
+         "employment_terms" = "Terms.Text")
+```
+
+
+
+```{r fixedandpermanentLSEHR, fig.showtext=TRUE, fig.cap="Number of permanent and fixed-term academic staff at LSE (LSE HR internal data 2023)"}
+hr <- hr %>%
+  mutate(academic_year = str_remove(academic_year, " Staff record"), # keep only date
+         academic_year = str_replace(academic_year, "/", "-20"),
+         staff_category = case_when(
+           Staff.Type %in% c("Emeritus Teacher", "Extended Education", "Graduate Intern", "Support") ~ "Non-academic positions",
+           Staff.Type == "Graduate Teaching Assistant" ~ "GTA (PhD students)",
+           Staff.Type %in% c("Guest Teacher", "LSE fellows", "Policy", "Research", "Teaching", "Teaching and Research") ~ "Academic positions"),
+         employment_terms2 = case_when(
+           employment_terms %in% c("Atypical", "Fixed-term", "Open-ended/Subject to Funding") ~ "fixed-term",
+           employment_terms == "Open-ended/Permanent" ~ "permanent"),
+         academic_employment = case_when(
+           staff_category %in% c("Academic positions", "GTA (PhD students)") & employment_terms2 == "fixed-term" ~ "Academic (fixed-term)",
+           staff_category == "Academic positions" & employment_terms2 == "permanent" ~ "Academic (permanent)"))
+
+tab <- hr %>%
+  filter(!staff_category == "Non-academic positions") %>%
+  group_by(academic_year, academic_employment) %>%
+  summarise(sum = sum(Headcount.Rounded))
+
+tab <- tab %>%
+  group_by(academic_year) %>%
+  mutate(total_academic = sum(sum),
+         total_casual_academic = sum[academic_employment == "Academic (fixed-term)"],
+         total_permanent_academic = sum[academic_employment == "Academic (permanent)"],
+         prop_casual = (total_casual_academic/total_academic)*100)
+
+tab2 <- data.frame(academic_year = c("2014-2015", "2015-2016")) # add rows for years pictured in HESA data but not in LSE data
+tab <- bind_rows(tab2, tab)
+
+p <- tab %>% ggplot(aes(x=academic_year, y=sum, group=academic_employment)) +
+  geom_point(aes(colour=academic_employment)) +
+  geom_line(aes(colour=academic_employment)) +
+  #scale_x_discrete(expand = expand_scale(mult = c(.05, .55))) +
+  #scale_y_continuous(labels = scales::percent_format(scale = 1), breaks = seq(0,100,10), limits = c(0,100)) +
+  scale_y_continuous(limits = c(690, 1040)) +
+  scale_color_manual(values = c("darkred", "black"), name="Contract type: ", na.translate = F) +
+  labs(title = "Number of fixed-term and permanent academic staff at LSE (LSE HR internal data)",
+       caption = "Source: LSE internal HR data") +
+  personal_theme_simple
+
+p
+
+#ggsave(p, filename = "plot_LSEHR_nbstaff.png", width = 6.5, height = 4) # save plot
+
+```
+
+```{r typepermanentacademic, fig.showtext=TRUE}
+tab <- hr %>%
+  filter(!staff_category == "Non-academic positions", academic_employment == "Academic (permanent)") %>%
+  group_by(academic_year, Staff.Type) %>%
+  summarise(sum = sum(Headcount.Rounded)) 
+
+tab2 <- data.frame(academic_year = c("2016-2017", "2017-2018"),
+                   Staff.Type = c("Guest Teacher", "Guest Teacher"),
+                   sum = c(0, 0)) # add rows with zero permanent positions for guest teachers prior to 2018-2019 
+# we assume it is zero since no guest teachers appear among permanent academic staff prior to 2018-2018
+tab <- bind_rows(tab2, tab)
+
+#lagged values to calculate change
+tab <- tab %>%
+  group_by(Staff.Type) %>%
+  filter(!Staff.Type == "Policy") %>% # remove this empty category
+  mutate(sum_previous_year = lag(sum, n=1),
+         absolute_change = sum - sum_previous_year,
+         total_change = (sum[academic_year == "2021-2022"]) - (sum[academic_year == "2016-2017"]),
+         categorical_change = case_when(
+           absolute_change > 0 ~ "increase", 
+           absolute_change == 0 ~ "no change",
+           absolute_change < 0 ~ "decrease"),
+         categorical_change = factor(categorical_change, levels = c("increase", "decrease", "no change")),
+         staff_type = recode(Staff.Type,
+                             "Guest Teacher" = "Guest teachers\n(permanent only)",
+                             "Research" = "Research-only",
+                             "Teaching" = "Teaching-only\n(Education-track)",
+                             "Teaching and Research" = "Teaching and research"),
+         staff_type = factor(staff_type, levels = c("Teaching and research",
+                                                    "Guest teachers\n(permanent only)", 
+                                                    "Research-only", 
+                                                    "Teaching-only\n(Education-track)")))
+
+#lollipop plot 1: year-by-year
+lolliplot1 <- ggplot(tab, aes(x=academic_year, y=absolute_change, colour = categorical_change, group = staff_type)) +
+  geom_hline(aes(yintercept=0), colour = "black") +
+  geom_segment(aes(x=academic_year, xend=academic_year, y=0, yend=absolute_change, color = categorical_change)) +
+  geom_point(aes(color=categorical_change), size=2) +
+  facet_wrap(~ staff_type) +
+  scale_color_manual(values = c("black", "red", "grey"), name="Change (absolute numbers)", na.translate = F) +
+  scale_y_continuous(breaks = seq(-20, 20, by= 10)) +
+  personal_theme_simple_facets +
+  theme(legend.position = "none") +
+  xlab("") +
+  labs(title = "Yearly change (absolute terms) in permanent academic staff numbers by staff category (LSE HR internal data)",
+       caption = "Source: LSE internal HR data (2023)")
+
+lolliplot1
+
+#ggsave(lolliplot1, filename = "lolliplot_LSEHR_changepermanentstaff.png", width = 6, height = 7) # save plot
+```
+
+
+```{r typepermanentacademic2, fig.showtext=TRUE}
+# lollipop plot 2: change over the period
+tab2 <- tab %>% filter(academic_year == "2021-2022") 
+
+tab3 <- tab2 %>%
+  ungroup() %>%
+  add_row(staff_type = "All combined", total_change = sum(tab2$total_change)) %>%
+  mutate(categorical_change = case_when(
+           total_change > 0 ~ "increase", 
+           total_change < 0 ~ "decrease"),
+         categorical_change = factor(categorical_change, levels = c("increase", "decrease")),
+         staff_type = factor(staff_type, levels = c("Teaching and research",
+                                                    "Guest teachers\n(permanent only)", 
+                                                    "Research-only", 
+                                                    "Teaching-only\n(Education-track)",
+                                                    "All combined")))
+
+
+lolliplot2 <- ggplot(tab3, aes(x=staff_type, y=total_change, colour = categorical_change)) +
+  geom_hline(aes(yintercept=0), colour = "black") +
+  geom_segment(aes(x=staff_type, xend=staff_type, y=0, yend=total_change, color = categorical_change)) +
+  geom_point(aes(color=categorical_change), size=2) +
+  scale_color_manual(values = c("black", "red")) +
+  scale_y_continuous(limits = c(-80, 50)) +
+  personal_theme_simple +
+  theme(legend.position = "none")+
+  xlab("") +
+  labs(title = "Overall change (absolute terms) in permanent academic staff numbers\nby staff category between 2016-2017 and 2021-2022",
+       caption = "Source: LSE internal HR data (2023)") +
+  geom_text(
+    data = tab3,
+    aes(y = ifelse(total_change > 0, total_change, (total_change -15)), 
+        x = staff_type, 
+        label = ifelse(total_change > 0, paste0("+", total_change), total_change), 
+        colour = categorical_change),
+    vjust = -1,
+    #nudge_y = 2,
+    family = "Arial Narrow",
+    fontface = "bold",
+    size = 4)
+
+
+lolliplot2
+
+#ggsave(lolliplot2, filename = "lolliplot_LSEHR_combinedchangepermanent.png", width = 5, height = 5) # save plot
+```
+
 
 
 \newpage
