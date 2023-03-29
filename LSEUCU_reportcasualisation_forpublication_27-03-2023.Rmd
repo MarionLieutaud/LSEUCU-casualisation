@@ -1,7 +1,7 @@
 ---
-title: "Casualisation at LSE: macro and comparative analyses"
-author: "LSE UCU anti-casualisation chairs"
-date: "2023-03-02"
+title: "The crisis of academic casualisation at LSE: macro and comparative analyses"
+author: "LSE UCU"
+date: "2023-03-28"
 output: 
   bookdown::pdf_document2:
     toc: true
@@ -680,15 +680,16 @@ hr <- hr %>%
 
 ```{r fixedandpermanentLSEHR, fig.showtext=TRUE, fig.cap="Number of permanent and fixed-term academic staff at LSE (LSE HR internal data 2023)"}
 hr <- hr %>%
-  mutate(academic_year = str_remove(academic_year, " Staff record"), # keep only date
+  mutate(academic_year = str_remove(academic_year, " Staff record"), # keep only dates
          academic_year = str_replace(academic_year, "/", "-20"),
          staff_category = case_when(
            Staff.Type %in% c("Emeritus Teacher", "Extended Education", "Graduate Intern", "Support") ~ "Non-academic positions",
            Staff.Type == "Graduate Teaching Assistant" ~ "GTA (PhD students)",
            Staff.Type %in% c("Guest Teacher", "LSE fellows", "Policy", "Research", "Teaching", "Teaching and Research") ~ "Academic positions"),
          employment_terms2 = case_when(
-           employment_terms %in% c("Atypical", "Fixed-term", "Open-ended/Subject to Funding") ~ "fixed-term",
+           employment_terms %in% c("Fixed-term", "Open-ended/Subject to Funding") ~ "fixed-term",
            employment_terms == "Open-ended/Permanent" ~ "permanent"),
+         employment_terms2 = factor(employment_terms2, levels = c("fixed-term", "permanent")),
          academic_employment = case_when(
            staff_category %in% c("Academic positions", "GTA (PhD students)") & employment_terms2 == "fixed-term" ~ "Academic (fixed-term)",
            staff_category == "Academic positions" & employment_terms2 == "permanent" ~ "Academic (permanent)"))
@@ -700,19 +701,18 @@ tab <- hr %>%
 
 tab <- tab %>%
   group_by(academic_year) %>%
+  filter(!is.na(academic_employment)) %>%
   mutate(total_academic = sum(sum),
          total_casual_academic = sum[academic_employment == "Academic (fixed-term)"],
-         total_permanent_academic = sum[academic_employment == "Academic (permanent)"],
-         prop_casual = (total_casual_academic/total_academic)*100)
+         prop_casual = (total_casual_academic/total_academic)*100) %>%
+  ungroup() %>%
+  add_row(academic_year = "2015-2016", .before=0) %>%
+  add_row(academic_year = "2014-2015", .before=0)
 
-tab2 <- data.frame(academic_year = c("2014-2015", "2015-2016")) # add rows for years pictured in HESA data but not in LSE data
-tab <- bind_rows(tab2, tab)
 
 p <- tab %>% ggplot(aes(x=academic_year, y=sum, group=academic_employment)) +
   geom_point(aes(colour=academic_employment)) +
   geom_line(aes(colour=academic_employment)) +
-  #scale_x_discrete(expand = expand_scale(mult = c(.05, .55))) +
-  #scale_y_continuous(labels = scales::percent_format(scale = 1), breaks = seq(0,100,10), limits = c(0,100)) +
   scale_y_continuous(limits = c(690, 1040)) +
   scale_color_manual(values = c("darkred", "black"), name="Contract type: ", na.translate = F) +
   labs(title = "Number of fixed-term and permanent academic staff at LSE (LSE HR internal data)",
@@ -722,25 +722,25 @@ p <- tab %>% ggplot(aes(x=academic_year, y=sum, group=academic_employment)) +
 p
 
 #ggsave(p, filename = "plot_LSEHR_nbstaff.png", width = 6.5, height = 4) # save plot
-
 ```
 
-```{r typepermanentacademic, fig.showtext=TRUE}
+
+
+```{r typepermanentacademic, fig.showtext=TRUE, fig.height=7, fig.width=6}
 tab <- hr %>%
   filter(!staff_category == "Non-academic positions", academic_employment == "Academic (permanent)") %>%
   group_by(academic_year, Staff.Type) %>%
-  summarise(sum = sum(Headcount.Rounded)) 
-
-tab2 <- data.frame(academic_year = c("2016-2017", "2017-2018"),
-                   Staff.Type = c("Guest Teacher", "Guest Teacher"),
-                   sum = c(0, 0)) # add rows with zero permanent positions for guest teachers prior to 2018-2019 
+  summarise(sum = sum(Headcount.Rounded)) %>%
+  ungroup() %>%
+  add_row(academic_year = "2017-2018",  Staff.Type = "Guest Teacher", sum = 0, .before=0) %>%
+  add_row(academic_year = "2016-2017",  Staff.Type = "Guest Teacher", sum = 0, .before=0)
+# add rows with zero permanent positions for guest teachers prior to 2018-2019
 # we assume it is zero since no guest teachers appear among permanent academic staff prior to 2018-2018
-tab <- bind_rows(tab2, tab)
 
 #lagged values to calculate change
 tab <- tab %>%
   group_by(Staff.Type) %>%
-  filter(!Staff.Type == "Policy") %>% # remove this empty category
+  filter(!Staff.Type == "Policy") %>% # remove this empty category (there are no permanent Policy academics)
   mutate(sum_previous_year = lag(sum, n=1),
          absolute_change = sum - sum_previous_year,
          total_change = (sum[academic_year == "2021-2022"]) - (sum[academic_year == "2016-2017"]),
@@ -779,7 +779,7 @@ lolliplot1
 ```
 
 
-```{r typepermanentacademic2, fig.showtext=TRUE}
+```{r typepermanentacademic2, fig.showtext=TRUE, fig.height=6, fig.width=6}
 # lollipop plot 2: change over the period
 tab2 <- tab %>% filter(academic_year == "2021-2022") 
 
@@ -831,17 +831,11 @@ lolliplot2
 \newpage
 # LSE fellow and postdoc survey : survey description, results not yet disclosed
 
-The 2022-2023 Postdoc and Fellow survey, conducted jointly by the LSE Fellows network and the UCU anti-casualisation officers, targeted all categories of post-doctoral fellows (LSE Fellows, Teaching Fellows, Research Fellows, Research Officers). The survey yielded 171 responses, 158 of which are fixed-term but not hourly positions. This includes 99 LSE Fellows, and 49 Research Fellows and Research Officers. Based on HR breakdown of Fellows (including LSE Fellows, Teaching Fellows, Research Fellows, Policy Fellows, Professorial Fellows and Research Officer), we can estimate that the survey participation rate was at around 70% for LSE Fellows and 65% for fixed-term (not hourly) staff overall. The survey represented all departments and institutes except for the departments of Finance and Accounting.
+The 2022-2023 Postdoc and Fellow survey, conducted jointly by the LSE Fellows network and the UCU anti-casualisation officers, targeted all categories of post-doctoral fellows (LSE Fellows, Teaching Fellows, Research Fellows, Research Officers). 
 
 In order to protect the respect the pledge of anonymity that was made to participants in the Postdoc and Fellow Survey, we are not sharing data or code for analysis here, and only include some of the most telling figures. 
 
 ```{r, fig.align='center', out.width="70%", include = TRUE}
 knitr::include_graphics('~/Dropbox (Personal)/LSE UCU/Casualisation data/Q_future_plot.png')
-```
-
-```{r, include = FALSE}
-# Insecurity
-#Mental heath issues are endemic among respondents, as is overwork (working regularly in the evenings, at the weekend, on vacation) and anxiety linked to professional insecurity.
-#There is a difference of close to 10 percentage points between those on short contracts (52% constant anxiety) and those on longer contracts (44% constant anxiety). The overwhelming majority of survey respondents **(92%) are affirmative that they will not get a permanent position at LSE**: 69% think it ‘very unlikely’ and a further 23% deem it ‘unlikely’. 
 ```
 
