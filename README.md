@@ -1,5 +1,5 @@
 # LSEUCU-casualisation
-Code for the 2023 LSE UCU report on academic casualisation at LSE. Includes macro and comparative analyses of 2023 HESA data (code, output and data freely available), analyses of LSE internal HR data (code and output available but not the data) and figures from the 2023 LSE Postdoc and Fellows Survey (only output available).
+Code for the 2023 LSE UCU report on academic casualisation at LSE. Includes macro and comparative analyses of 2023 HESA data (code, output and data included), analyses of LSE internal HR data (code and output included but not the data) and figures from the 2023 LSE Postdoc and Fellows Survey (only output included).
 
 All of the HESA analyses are based on publicly-available data published by the Higher Education Statistics Agency (HESA).
 This data can be directly downloaded on the HESA website: www.hesa.ac.uk/data-and-analysis. 
