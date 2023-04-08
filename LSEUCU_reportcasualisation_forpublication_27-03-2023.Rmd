@@ -27,6 +27,7 @@ library(ggtext)
 library(forcats)
 library(showtext)
 library(hrbrthemes)
+library(patchwork)
 #hrbrthemes::import_roboto_condensed() # if need to download font
 ```
 
@@ -90,6 +91,24 @@ personal_theme_simple_facets <-
   theme_ipsum(base_size=9) +
   theme(plot.background = element_rect(fill = "white"),
         strip.text = element_text(face = "bold"),
+        panel.grid.minor.y = element_blank(),
+        axis.text.x = element_text(face = "bold",
+                                   angle=30, 
+                                   vjust=1, hjust= 1),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        plot.title = ggtext::element_textbox_simple(size = 12),
+        plot.subtitle = ggtext::element_textbox_simple(size = 9, face = "bold"),
+        plot.caption.position = "plot",
+        plot.caption = element_text(size = 7, face = "italic"),
+        legend.position = "right",
+        legend.text = element_text(size=10),
+        legend.title = element_text(size=11))
+
+# theme for patchwork plots
+personal_theme_simple_patchwork <- 
+  theme_ipsum(base_size=9) +
+  theme(strip.text = element_text(face = "bold"),
         panel.grid.minor.y = element_blank(),
         axis.text.x = element_text(face = "bold",
                                    angle=30, 
@@ -318,16 +337,34 @@ p4 <- h_lse_long %>%
   ggplot(aes(x=date, y=value, group=contract.type)) +
   geom_point(aes(colour=contract.type)) +
   geom_line(aes(colour=contract.type)) +
-  #scale_x_discrete(expand = expand_scale(mult = c(.05, .55))) +
-  #scale_y_continuous(labels = scales::percent_format(scale = 1), breaks = seq(0,100,10), limits = c(0,100)) +
-  scale_color_manual(values = c("darkred", "black"), name="Contract type: ") +
+  scale_color_manual(values = c("darkred", "black"), name="Contract type: ") 
+
+
+p4_standalone <- p4 +
   labs(title = "Number of fixed-term and permanent academic staff at LSE",
        caption = "Source: HESA (annual data 2014-2022)") +
   personal_theme_simple
 
-p4
-
+p4_standalone
 #ggsave(p4, filename = "plot_HESA_nbstaff.png", width = 6.5, height = 4) # save plot
+```
+```{r patchworkHESA}
+# prep for patchwork plot later
+y1_hesa <- h_lse_long$value[h_lse_long$contract.type == "fixed-term" & h_lse_long$date == "2021-2022"]
+y2_hesa <- h_lse_long$value[h_lse_long$contract.type == "permanent" & h_lse_long$date == "2021-2022"]
+y_mid_hesa <- (y1_hesa+y2_hesa)/2
+label_hesa <- paste0("<span style='color:red'>**", 
+                round(h_lse_long$latest_prop_casual_2022[h_lse_long$date == "2021-2022" & h_lse_long$contract.type == "fixed-term"], digits=1), "%",
+                "**</span> <br> casualised <br> academic staff <br> in 2021-2022")
+
+p4_patchwork <- p4 +
+  geom_segment(aes(x = "2021-2022", xend = "2021-2022", y=y1_hesa, yend = y2_hesa), linetype = 2, colour = 'grey') +
+  geom_richtext(aes(x = "2021-2022", y = y_mid_hesa, label = label_hesa), 
+                hjust = 1, size = 4, fill = NA, label.colour = NA, family = "Arial Narrow") +
+  scale_y_continuous(limits = c(690, 1080)) +
+  labs(title = "HESA data") +
+  personal_theme_simple_patchwork +
+  theme(legend.position = "top")
 ```
 
 
@@ -685,7 +722,7 @@ hr <- hr %>%
          staff_category = case_when(
            Staff.Type %in% c("Emeritus Teacher", "Extended Education", "Graduate Intern", "Support") ~ "Non-academic positions",
            Staff.Type == "Graduate Teaching Assistant" ~ "GTA (PhD students)",
-           Staff.Type %in% c("Guest Teacher", "LSE fellows", "Policy", "Research", "Teaching", "Teaching and Research") ~ "Academic positions"),
+           Staff.Type %in% c("Guest Teacher", "LSE Fellow", "Policy", "Research", "Teaching", "Teaching and Research") ~ "Academic positions"),
          employment_terms2 = case_when(
            employment_terms %in% c("Fixed-term", "Open-ended/Subject to Funding") ~ "fixed-term",
            employment_terms == "Open-ended/Permanent" ~ "permanent"),
@@ -696,6 +733,9 @@ hr <- hr %>%
 
 tab <- hr %>%
   filter(!staff_category == "Non-academic positions") %>%
+  mutate(academic_employment = recode(academic_employment, 
+                                      "Academic (fixed-term)" = "fixed-term",
+                                      "Academic (permanent)" = "permanent")) %>%
   group_by(academic_year, academic_employment) %>%
   summarise(sum = sum(Headcount.Rounded))
 
@@ -703,27 +743,68 @@ tab <- tab %>%
   group_by(academic_year) %>%
   filter(!is.na(academic_employment)) %>%
   mutate(total_academic = sum(sum),
-         total_casual_academic = sum[academic_employment == "Academic (fixed-term)"],
+         total_casual_academic = sum[academic_employment == "fixed-term"],
          prop_casual = (total_casual_academic/total_academic)*100) %>%
   ungroup() %>%
   add_row(academic_year = "2015-2016", .before=0) %>%
   add_row(academic_year = "2014-2015", .before=0)
 
 
-p <- tab %>% ggplot(aes(x=academic_year, y=sum, group=academic_employment)) +
+p_hr <- tab %>% ggplot(aes(x=academic_year, y=sum, group=academic_employment)) +
   geom_point(aes(colour=academic_employment)) +
   geom_line(aes(colour=academic_employment)) +
-  scale_y_continuous(limits = c(690, 1040)) +
-  scale_color_manual(values = c("darkred", "black"), name="Contract type: ", na.translate = F) +
+  #scale_y_continuous(limits = c(690, 1040)) +
+  scale_color_manual(values = c("darkred", "black"), name="Contract type: ", na.translate = F) 
+
+
+p_hr_standalone <-p_hr +
   labs(title = "Number of fixed-term and permanent academic staff at LSE (LSE HR internal data)",
        caption = "Source: LSE internal HR data") +
   personal_theme_simple
 
-p
+p_hr_standalone
 
-#ggsave(p, filename = "plot_LSEHR_nbstaff.png", width = 6.5, height = 4) # save plot
+#ggsave(p_hr_standalone, filename = "plot_LSEHR_nbstaff.png", width = 6.5, height = 4) # save plot
+```
+\newpage
+
+```{r patchworkHRprep}
+# prep for patchwork
+y1_hr <- tab$sum[tab$academic_employment == "fixed-term" & tab$academic_year == "2021-2022"]
+y2_hr <- tab$sum[tab$academic_employment == "permanent" & tab$academic_year == "2021-2022"]
+y_mid_hr <- (y1_hr+y2_hr)/2
+label_hr <- paste0("<span style='color:red'>**", 
+                round(tab$prop_casual[tab$academic_year == "2021-2022" & tab$academic_employment == "fixed-term"], digits=1), "%",
+                "**</span> <br> casualised <br> academic staff <br> in 2021-2022")
+
+p_hr_patchwork <- p_hr +
+  geom_segment(aes(x = "2021-2022", xend = "2021-2022", y=y1_hr, yend = y2_hr), linetype = 2, colour = 'grey') +
+  geom_richtext(aes(x = "2021-2022", y = y_mid_hr, label = label_hr), 
+                hjust = 1, size = 4, fill = NA, label.colour = NA, family = "Arial Narrow") +
+  geom_richtext(aes(x = "2015-2016", y = y_mid_hr-50, label = "no LSE <br> HR data <br> before <br> 2016-2017"), 
+                hjust=0.5, size = 3, fill = NA, label.colour = NA, colour = "darkgrey", family = "Arial Narrow") +
+  scale_y_continuous(limits = c(690, 1080)) +
+  labs(title = "LSE HR internal data") +
+  personal_theme_simple_patchwork +
+  theme(legend.position = "top")
 ```
 
+
+```{r patchworkHR, fig.showtext=TRUE, fig.width=9, fig.height=6}
+# patchwork plots HESA + LSE HR
+plot_patchwork <- p4_patchwork + p_hr_patchwork + 
+  plot_layout(guides = 'collect') +
+  plot_annotation(title = "Numbers of fixed-term and permanent academic staff at LSE\naccording to HESA data and LSE HR internal data",
+                  caption = "Sources: HESA 2023 (left plot); LSE HR internal data 2023 (right plot)",
+                  theme = theme(plot.title = element_text(face = "bold"),
+                                plot.caption = element_text(face = "italic"))) & 
+  theme(legend.position = "bottom",
+        text = element_text(family = "Arial Narrow"),
+        plot.background = element_rect(colour = "white"))
+
+plot_patchwork
+#ggsave(plot_patchwork, filename = "plotpatchwork_HESA_LSEHR.png", width = 8, height = 5) # save plot)
+```
 
 
 ```{r typepermanentacademic, fig.showtext=TRUE, fig.height=7, fig.width=6}
@@ -740,7 +821,7 @@ tab <- hr %>%
 #lagged values to calculate change
 tab <- tab %>%
   group_by(Staff.Type) %>%
-  filter(!Staff.Type == "Policy") %>% # remove this empty category (there are no permanent Policy academics)
+  filter(!Staff.Type == "Policy", !Staff.Type == "LSE Fellow") %>% # remove these empty categories (there are no permanent Policy/LSE fellows)
   mutate(sum_previous_year = lag(sum, n=1),
          absolute_change = sum - sum_previous_year,
          total_change = (sum[academic_year == "2021-2022"]) - (sum[academic_year == "2016-2017"]),
