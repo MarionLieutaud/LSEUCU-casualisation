@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = FALSE,
                       message = FALSE)
 ```
 
+# Set-up
 ```{r packages, include=FALSE}
 library(tidyverse)
 library(ggtext)
@@ -43,11 +44,18 @@ personal_theme_gif <-
         legend.position = "none")
 ```
 
-# gganimate: Number of permanent and fixed-term staff
-```{r animate1}
+```{r data}
 # Run the other script first (LSEUCU_reportcasualisation) or
 # load the merged and cleaned data directly (h) if you saved it before
 
+# format date
+h <- h %>%
+  mutate(date_numeric = as.numeric(str_match(date, "^\\d{4}")))
+```
+
+
+# gganimate: LSE
+```{r animateLSE}
 h_lse <- h %>% 
   filter(HE.provider %in% c("London School of Economics and Political Science")) 
 
@@ -56,51 +64,9 @@ h_lse_long <- pivot_longer(h_lse, cols = c(Open.ended.Permanent, Fixed.term),
   mutate(contract.type = case_match(contract.type, 
                                     "Fixed.term" ~ "fixed-term",
                                     "Open.ended.Permanent" ~ "permanent"))
-
 # plot static
-p4 <- h_lse_long %>%
-  mutate(date_numeric = as.numeric(date_numeric),
-         contract.type = case_match(contract.type,
-                                    "fixed-term" ~ "Fixed-term\npositions",
-                                    "permanent" ~ "Permanent\npositions")) %>%
-  ggplot(aes(x=date_numeric, y=value, group=contract.type)) +
-  geom_point(aes(colour=contract.type)) +
-  geom_line(aes(colour=contract.type)) +
-  scale_y_continuous(limits = c(690, 1100)) +
-  scale_x_continuous(expand = expansion(mult = c(.05, .05)), 
-                     breaks = seq(2014, 2021,by=1), 
-                     labels = levels(as.factor(h_lse_long$date))) +
-  scale_color_manual(values = c("darkred", "black")) +
-  coord_cartesian(clip = 'off') + 
-  labs(title = "<span style = 'font-size:24pt; color: red'>Casualisation</span> at <span style = 'font-size:24pt; color: red'>LSE</span>",
-       caption = "Source: HESA (annual data 2014-2022)") +
-  personal_theme_gif
-
-# animate and dynamic labels
-p5 <- p4 + 
-   geom_segment(aes(xend = 2021.5, yend = value), linetype = 2, colour = 'grey') +
-   geom_text(aes(x = 2021.5, label = contract.type, color = contract.type), hjust = 0, size=5, fontface = "bold") +
-   transition_reveal(date_numeric) +
-   labs(subtitle = "Academic staff. Year: {round(frame_along, 0)}-{round(frame_along+1, 0)}")
-
-animate(p5, duration = 5, end_pause = 20, height = 450, width = 500, renderer = gifski_renderer())
-
-anim_save("staff_breakdown.gif", 
-          animation = p5, 
-          renderer = gifski_renderer(),
-          duration = 5, 
-          end_pause = 20, 
-          height = 450, 
-          width = 500, 
-          res = 95)
-```
-
-
-```{r animate2}
-# trying to get rid of buggy end of animation
 p4_2 <- h_lse_long %>%
-  mutate(date_numeric = as.numeric(date_numeric),
-         contract.type = case_match(contract.type,
+  mutate(contract.type = case_match(contract.type,
                                     "fixed-term" ~ "Fixed-term\npositions",
                                     "permanent" ~ "Permanent\npositions")) %>%
   ggplot(aes(x=date_numeric, y=value, group=contract.type)) +
@@ -110,15 +76,13 @@ p4_2 <- h_lse_long %>%
   geom_text(aes(x = max(date_numeric)+.1, label = paste0(contract.type,":", sprintf("%5.0f", value)), color = contract.type), hjust=0, size=5, fontface = "bold") +
   scale_color_manual(values = c("darkred", "black")) +
   coord_cartesian(clip = 'off') + 
-  #labs(title = 'Active in Jan', y = 'Individual Active') +
-  #enter_drift(x_mod = -1) + exit_drift(x_mod = 1) +
   scale_y_continuous(limits = c(690, 1100)) +
   scale_x_continuous(expand = expansion(mult = c(.05, .05)), 
                      breaks = seq(2014, 2021,by=1), 
                      labels = levels(as.factor(h_lse_long$date))) +
   scale_color_manual(values = c("darkred", "black")) +
   labs(title = "<span style = 'font-size:24pt; color: red'>Casualisation</span> at <span style = 'font-size:24pt; color: red'>LSE</span>",
-       caption = "Source: HESA (annual data 2014-2022)") +
+       caption = "Source: HESA (annual data 2014/15-2021/22)\nAuthor: LSE UCU") +
   personal_theme_gif
 
 # animate and dynamic labels
@@ -129,7 +93,7 @@ p5_2 <- p4_2 +
 
 animate(p5_2, duration = 5, height = 450, width = 500, renderer = gifski_renderer())
 
-anim_save("staff_breakdown2.gif", 
+anim_save("LSE_casualisation.gif", 
           animation = p5_2, 
           renderer = gifski_renderer(),
           duration = 7, 
@@ -138,3 +102,50 @@ anim_save("staff_breakdown2.gif",
           res = 150)
 ```
 
+# gganimate: KCL
+```{r animateKCL}
+# load the merged and cleaned data directly (h) if you saved it before
+h_kcl <- h %>% 
+  filter(HE.provider %in% c("King's College London")) 
+
+h_kcl_long <- pivot_longer(h_kcl, cols = c(Open.ended.Permanent, Fixed.term),
+                           names_to = "contract.type") %>%
+  mutate(contract.type = case_match(contract.type, 
+                                    "Fixed.term" ~ "fixed-term",
+                                    "Open.ended.Permanent" ~ "permanent"))
+# plot static
+p_kcl1 <- h_kcl_long %>%
+  mutate(contract.type = case_match(contract.type,
+                                    "fixed-term" ~ "Fixed-term\npositions",
+                                    "permanent" ~ "Permanent\npositions")) %>%
+  ggplot(aes(x=date_numeric, y=value, group=contract.type)) +
+  geom_point(aes(colour=contract.type), size = 3) +
+  geom_line(aes(colour=contract.type)) +
+  geom_segment(aes(xend=max(date_numeric)+.1, yend = value), linetype = 2, colour = 'grey') +
+  geom_text(aes(x = max(date_numeric)+.1, label = paste0(contract.type,":", sprintf("%5.0f", value)), color = contract.type), hjust=0, size=5, fontface = "bold") +
+  scale_color_manual(values = c("darkred", "black")) +
+  coord_cartesian(clip = 'off') + 
+  scale_x_continuous(expand = expansion(mult = c(.05, .05)), 
+                     breaks = seq(2014, 2021,by=1), 
+                     labels = levels(as.factor(h_kcl_long$date))) +
+  scale_color_manual(values = c("darkred", "black")) +
+  labs(title = "<span style = 'font-size:24pt; color: red'>Casualisation</span> at <span style = 'font-size:24pt; color: red'>KCL</span>",
+       caption = "Source: HESA (annual data 2014/15-2021/22)\nAuthor: LSE UCU") +
+  personal_theme_gif
+
+# animate and dynamic labels
+p_kcl2 <- p_kcl1 + 
+  transition_reveal(date_numeric) + 
+  view_follow(fixed_y = TRUE) +
+  labs(subtitle = "Academic staff. Year: {round(frame_along, 0)}-{round(frame_along+1, 0)}")
+
+animate(p_kcl2, duration = 5, height = 450, width = 500, renderer = gifski_renderer())
+
+anim_save("KCL_casualisation.gif", 
+          animation = p_kcl2, 
+          renderer = gifski_renderer(),
+          duration = 7, 
+          height = 800, 
+          width = 900, 
+          res = 150)
+```
